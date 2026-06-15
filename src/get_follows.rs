@@ -13,10 +13,15 @@ pub struct AtProtoGetFollows {
     password: String,
     agent: AtpAgent<MemorySessionStore, ReqwestClient>,
     is_login: bool,
+    limit: Option<LimitedNonZeroU8<100>>,
 }
 
 impl AtProtoGetFollows {
-    pub fn new(login: &str, password: &str) -> Self {
+    pub fn new(login: &str, password: &str, limit: u8) -> Self {
+        let limit = match LimitedNonZeroU8::<100>::try_from(limit) {
+            Ok(limit) => Some(limit),
+            Err(_) => None,
+        };
         // Initialize the agent
         let agent = AtpAgent::new(
             ReqwestClient::new("https://bsky.social"),
@@ -27,6 +32,7 @@ impl AtProtoGetFollows {
             password: password.to_string(),
             agent,
             is_login: false,
+            limit: limit,
         }
     }
 
@@ -52,7 +58,6 @@ impl AtProtoGetFollows {
         let mut cursor = None;
         let subject;
         let mut all_follows = Vec::new();
-        let limit = LimitedNonZeroU8::try_from(10).map_err(anyhow::Error::msg)?;
         // Call the getFollowers endpoint
         loop {
             let response = self
@@ -65,7 +70,7 @@ impl AtProtoGetFollows {
                     get_follows::ParametersData {
                         actor: did.clone(),
                         cursor: cursor,
-                        limit: Some(limit),
+                        limit: self.limit,
                     }
                     .into(),
                 )
