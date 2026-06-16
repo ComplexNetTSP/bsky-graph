@@ -5,7 +5,7 @@ use atrium_api::types::string::{AtIdentifier, Did};
 use chrono::Local;
 use indicatif::ProgressBar;
 use log::{error, info};
-use parquet::{arrow::ArrowWriter, file::properties::WriterProperties};
+use parquet::{arrow::ArrowWriter, basic::Compression, file::properties::WriterProperties};
 use serde_arrow::schema::{SchemaLike, TracingOptions};
 use std::{fs::File, path::Path};
 use tokio::time::sleep;
@@ -95,7 +95,9 @@ impl FollowsWriter {
             std::fs::create_dir_all(parent)?;
         }
         let file = File::create(file)?;
-        let props = WriterProperties::builder().build();
+        let props = WriterProperties::builder()
+            .set_compression(Compression::SNAPPY)
+            .build();
         let mut writer = ArrowWriter::try_new(file, batch.schema(), Some(props))?;
         writer.write(&batch)?;
         writer.close()?;
