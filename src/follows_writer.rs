@@ -70,7 +70,7 @@ impl FollowsWriter {
     }
 
     pub fn flush(&mut self) -> Result<()> {
-        if self.buf.len() == 0 {
+        if self.buf.is_empty() {
             return Ok(());
         }
         info!(
@@ -86,7 +86,7 @@ impl FollowsWriter {
         Ok(())
     }
 
-    fn to_parquet(&mut self, batch: RecordBatch) -> Result<()> {
+    fn to_parquet(&self, batch: RecordBatch) -> Result<()> {
         let timestamp = Local::now().format("%Y_%m_%d_%H_%M_%S").to_string();
         let filepath = format!("{}/follows/follows_{}.parquet", &self.output_dir, timestamp);
         info!("Process follow_writer write file: {}", &filepath);

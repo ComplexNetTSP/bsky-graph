@@ -64,7 +64,7 @@ impl AtProtoGetFollower {
                 .get_followers(
                     get_followers::ParametersData {
                         actor: did.clone(),
-                        cursor: cursor,
+                        cursor,
                         limit: Some(limit),
                     }
                     .into(),

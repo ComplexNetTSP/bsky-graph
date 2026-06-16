@@ -19,10 +19,7 @@ pub struct AtProtoGetFollows {
 
 impl AtProtoGetFollows {
     pub fn new(login: &str, password: &str, limit: u8) -> Self {
-        let limit = match LimitedNonZeroU8::<100>::try_from(limit) {
-            Ok(limit) => Some(limit),
-            Err(_) => None,
-        };
+        let limit = LimitedNonZeroU8::<100>::try_from(limit).ok();
         // Initialize the agent
         let agent = AtpAgent::new(
             ReqwestClient::new("https://bsky.social"),
@@ -33,7 +30,7 @@ impl AtProtoGetFollows {
             password: password.to_string(),
             agent,
             is_login: false,
-            limit: limit,
+            limit,
         }
     }
 
@@ -70,7 +67,7 @@ impl AtProtoGetFollows {
                 .get_follows(
                     get_follows::ParametersData {
                         actor: did.clone(),
-                        cursor: cursor,
+                        cursor,
                         limit: self.limit,
                     }
                     .into(),

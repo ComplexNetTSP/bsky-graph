@@ -30,10 +30,7 @@ impl DidFileReader {
         if bytes_read == 0 {
             return Ok(None); // EOF
         }
-        self.position = self
-            .reader
-            .seek(SeekFrom::Current(0))
-            .context("Failed to get position")?;
+        self.position = self.reader.stream_position()?;
         Ok(Some(line.trim().to_string()))
     }
 }
