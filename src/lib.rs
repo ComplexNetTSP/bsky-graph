@@ -1,3 +1,4 @@
+pub mod atproto_client;
 pub mod follower;
 pub mod follows;
 pub mod follows_writer;

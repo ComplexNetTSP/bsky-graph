@@ -1,4 +1,4 @@
-use crate::{AtProtoGetFollows, DidFileReader, Follows, utils::count_lines};
+use crate::{DidFileReader, Follows, atproto_client::AtProtoClient, utils::count_lines};
 use anyhow::Result;
 use arrow::{array::RecordBatch, datatypes::FieldRef};
 use atrium_api::types::string::{AtIdentifier, Did};
@@ -6,6 +6,7 @@ use chrono::Local;
 use indicatif::ProgressBar;
 use log::{error, info};
 use parquet::{arrow::ArrowWriter, basic::Compression, file::properties::WriterProperties};
+use serde::{Deserialize, Serialize};
 use serde_arrow::schema::{SchemaLike, TracingOptions};
 use std::{fs::File, path::Path};
 use tokio::time::sleep;
@@ -17,21 +18,24 @@ macro_rules! pause_ms {
     };
 }
 
-pub struct FollowsWriter {
-    atproto: AtProtoGetFollows,
+pub struct FollowsWriter<T, C>
+where
+    T: Serialize + Deserialize<'static>,
+    C: AtProtoClient<T>,
+{
+    atproto: C,
     reader: DidFileReader,
     pub buf_size: usize,
     pub output_dir: String,
-    pub buf: Vec<Follows>,
+    pub buf: Vec<T>,
 }
 
-impl FollowsWriter {
-    pub fn new(
-        atproto: AtProtoGetFollows,
-        reader: DidFileReader,
-        buf_size: usize,
-        output_dir: &str,
-    ) -> Self {
+impl<T, C> FollowsWriter<T, C>
+where
+    T: Serialize + Deserialize<'static>,
+    C: AtProtoClient<T>,
+{
+    pub fn new(atproto: C, reader: DidFileReader, buf_size: usize, output_dir: &str) -> Self {
         FollowsWriter {
             atproto,
             reader,
@@ -56,9 +60,8 @@ impl FollowsWriter {
                 }
             };
             let did_id: AtIdentifier = AtIdentifier::Did(did_parsed);
-            let (subject, follows) = self.atproto.get_follows_w_retry(did_id, 10).await?;
-            let mut subject_follows_edge = Follows::create_edge_list(subject, follows)?;
-            self.buf.append(&mut subject_follows_edge);
+            let mut edges = self.atproto.get_graph_w_retry(did_id, 10).await?;
+            self.buf.append(&mut edges);
             if self.buf.len() > self.buf_size {
                 self.flush()?;
             }
@@ -69,7 +72,7 @@ impl FollowsWriter {
         Ok(())
     }
 
-    pub fn flush(&mut self) -> Result<()> {
+    fn flush(&mut self) -> Result<()> {
         if self.buf.is_empty() {
             return Ok(());
         }

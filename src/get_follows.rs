@@ -1,4 +1,5 @@
-use anyhow::Context;
+use crate::{atproto_client::AtProtoClient, follows::Follows};
+use anyhow::{Context, Result};
 use atrium_api::{
     agent::atp_agent::{AtpAgent, store::MemorySessionStore},
     app::bsky::actor::defs::ProfileView,
@@ -110,5 +111,12 @@ impl AtProtoGetFollows {
             did,
             max_retry
         ))
+    }
+}
+
+impl AtProtoClient<Follows> for AtProtoGetFollows {
+    async fn get_graph_w_retry(&mut self, did: AtIdentifier, retries: u32) -> Result<Vec<Follows>> {
+        let (subject, follows) = self.get_follows_w_retry(did, retries).await?;
+        Follows::create_edge_list(subject, follows)
     }
 }
