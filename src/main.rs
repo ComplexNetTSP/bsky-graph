@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
-use bsky_graph::FollowsWriter;
-use bsky_graph::{AtProtoGetFollows, DidFileReader, utils::setup_logger};
+use bsky_graph::{AtProtoGetFollows, DidFileReader, ParquetWriter, utils::setup_logger};
 use clap::Parser;
 use std::env;
 
@@ -41,7 +40,7 @@ async fn main() -> Result<()> {
     let reader = DidFileReader::new(&args.input_file)?;
     // Initialize the agent
     let atproto: AtProtoGetFollows = AtProtoGetFollows::new(&login, &password, args.limit);
-    let mut writer = FollowsWriter::new(atproto, reader, args.buf_size, &args.output_dir);
-    writer.write_follows().await?;
+    let mut writer = ParquetWriter::new(atproto, reader, args.buf_size, &args.output_dir);
+    writer.write().await?;
     Ok(())
 }

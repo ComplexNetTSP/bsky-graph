@@ -18,7 +18,7 @@ macro_rules! pause_ms {
     };
 }
 
-pub struct FollowsWriter<T, C>
+pub struct ParquetWriter<T, C>
 where
     T: Serialize + Deserialize<'static>,
     C: AtProtoClient<T>,
@@ -30,13 +30,13 @@ where
     pub buf: Vec<T>,
 }
 
-impl<T, C> FollowsWriter<T, C>
+impl<T, C> ParquetWriter<T, C>
 where
     T: Serialize + Deserialize<'static>,
     C: AtProtoClient<T>,
 {
     pub fn new(atproto: C, reader: DidFileReader, buf_size: usize, output_dir: &str) -> Self {
-        FollowsWriter {
+        ParquetWriter {
             atproto,
             reader,
             buf_size,
@@ -45,7 +45,7 @@ where
         }
     }
 
-    pub async fn write_follows(&mut self) -> Result<()> {
+    pub async fn write(&mut self) -> Result<()> {
         println!("Retrives Flollows:");
         let bar = ProgressBar::new(count_lines(&self.reader.path)? as u64);
         while let Some(did) = self.reader.read_did()? {
