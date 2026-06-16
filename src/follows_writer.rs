@@ -1,4 +1,4 @@
-use crate::{AtProtoGetFollows, DidFileReader, Follows};
+use crate::{AtProtoGetFollows, DidFileReader, Follows, utils::count_lines};
 use anyhow::Result;
 use arrow::{array::RecordBatch, datatypes::FieldRef};
 use atrium_api::types::string::{AtIdentifier, Did};
@@ -7,11 +7,7 @@ use indicatif::ProgressBar;
 use log::{error, info};
 use parquet::{arrow::ArrowWriter, file::properties::WriterProperties};
 use serde_arrow::schema::{SchemaLike, TracingOptions};
-use std::{
-    fs::File,
-    io::{BufRead, BufReader},
-    path::Path,
-};
+use std::{fs::File, path::Path};
 use tokio::time::sleep;
 
 // to use only in async function
@@ -105,10 +101,4 @@ impl FollowsWriter {
         writer.close()?;
         Ok(())
     }
-}
-
-fn count_lines(path: &str) -> Result<usize> {
-    let file = File::open(path)?;
-    let reader = BufReader::new(file);
-    Ok(reader.lines().count())
 }

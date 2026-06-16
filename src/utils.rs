@@ -4,6 +4,10 @@ use log4rs::{
     config::{Appender, Config, Root},
     encode::pattern::PatternEncoder,
 };
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+};
 
 pub fn setup_logger(logfile: &str) -> Result<()> {
     let logfile = FileAppender::builder()
@@ -20,4 +24,10 @@ pub fn setup_logger(logfile: &str) -> Result<()> {
 
     log4rs::init_config(config)?;
     Ok(())
+}
+
+pub fn count_lines(path: &str) -> Result<usize> {
+    let file = File::open(path)?;
+    let reader = BufReader::new(file);
+    Ok(reader.lines().count())
 }
