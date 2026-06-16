@@ -4,6 +4,7 @@ use arrow::{array::RecordBatch, datatypes::FieldRef};
 use atrium_api::types::string::{AtIdentifier, Did};
 use chrono::Local;
 use indicatif::ProgressBar;
+use log::{error, info};
 use parquet::{arrow::ArrowWriter, file::properties::WriterProperties};
 use serde_arrow::schema::{SchemaLike, TracingOptions};
 use std::{
@@ -12,6 +13,14 @@ use std::{
     path::Path,
 };
 use tokio::time::sleep;
+
+// to use only in async function
+macro_rules! pause_ms {
+    ($t: expr) => {
+        sleep(tokio::time::Duration::from_millis($t)).await;
+    };
+}
+
 pub struct FollowsWriter {
     atproto: AtProtoGetFollows,
     reader: DidFileReader,
@@ -40,11 +49,18 @@ impl FollowsWriter {
         println!("Retrives Flollows:");
         let bar = ProgressBar::new(count_lines(&self.reader.path)? as u64);
         while let Some(did) = self.reader.read_did()? {
-            // pause 100 ms in order to pace teh number of request and avoid to be ban
-            pause().await;
+            // pause 100 ms in order to pace the number of request and avoid to be ban
+            pause_ms!(100);
             // Create from a handle string
-            let did = AtIdentifier::Did(Did::new(did).expect("failed to parse Did"));
-            let (subject, follows) = self.atproto.get_follows_w_retry(did, 10).await?;
+            let did_parsed = match Did::new(did) {
+                Ok(d) => d,
+                Err(e) => {
+                    error!("Unable to parse did: {}", e);
+                    continue;
+                }
+            };
+            let did_id: AtIdentifier = AtIdentifier::Did(did_parsed);
+            let (subject, follows) = self.atproto.get_follows_w_retry(did_id, 10).await?;
             let mut subject_follows_edge = Follows::create_edge_list(subject, follows)?;
             self.buf.append(&mut subject_follows_edge);
             if self.buf.len() > self.buf_size {
@@ -61,7 +77,10 @@ impl FollowsWriter {
         if self.buf.len() == 0 {
             return Ok(());
         }
-        //eprintln!("flush buffer of size {}", self.buf.len());
+        info!(
+            "Process follow_writer flush buffer of size {}",
+            self.buf.len()
+        );
         // Determine Arrow schema
         let fields = Vec::<FieldRef>::from_type::<Follows>(TracingOptions::default())?;
         // Build a record batch
@@ -74,6 +93,7 @@ impl FollowsWriter {
     fn to_parquet(&mut self, batch: RecordBatch) -> Result<()> {
         let timestamp = Local::now().format("%Y_%m_%d_%H_%M_%S").to_string();
         let filepath = format!("{}/follows/follows_{}.parquet", &self.output_dir, timestamp);
+        info!("Process follow_writer write file: {}", &filepath);
         let file = Path::new(&filepath);
         if let Some(parent) = Path::new(file).parent() {
             std::fs::create_dir_all(parent)?;
@@ -85,10 +105,6 @@ impl FollowsWriter {
         writer.close()?;
         Ok(())
     }
-}
-
-async fn pause() {
-    sleep(tokio::time::Duration::from_millis(100)).await;
 }
 
 fn count_lines(path: &str) -> Result<usize> {

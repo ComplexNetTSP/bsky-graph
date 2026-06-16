@@ -4,6 +4,7 @@ pub mod follows_writer;
 pub mod get_follower;
 pub mod get_follows;
 pub mod read_did;
+pub mod utils;
 // rexport
 pub use follower::Follower;
 pub use follows::Follows;
