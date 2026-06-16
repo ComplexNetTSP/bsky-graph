@@ -91,7 +91,13 @@ where
 
     fn to_parquet(&self, batch: RecordBatch) -> Result<()> {
         let timestamp = Local::now().format("%Y_%m_%d_%H_%M_%S").to_string();
-        let filepath = format!("{}/follows/follows_{}.parquet", &self.output_dir, timestamp);
+        let filepath = format!(
+            "{}/{}/{}_{}.parquet",
+            &self.output_dir,
+            &C::type_name(),
+            timestamp,
+            &&C::type_name(),
+        );
         info!("Process follow_writer write file: {}", &filepath);
         let file = Path::new(&filepath);
         if let Some(parent) = Path::new(file).parent() {

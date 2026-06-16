@@ -119,4 +119,8 @@ impl AtProtoClient<Follows> for AtProtoGetFollows {
         let (subject, follows) = self.get_follows_w_retry(did, retries).await?;
         Follows::create_edge_list(subject, follows)
     }
+
+    fn type_name() -> String {
+        "follows".to_string()
+    }
 }

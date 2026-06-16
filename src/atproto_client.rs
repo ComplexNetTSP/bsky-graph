@@ -13,4 +13,6 @@ where
         did: AtIdentifier,
         retries: u32,
     ) -> impl Future<Output = Result<Vec<T>>>;
+
+    fn type_name() -> String;
 }
