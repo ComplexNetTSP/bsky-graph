@@ -6,6 +6,7 @@ use atrium_api::{
     types::{LimitedNonZeroU8, string::AtIdentifier},
 };
 use atrium_xrpc_client::reqwest::ReqwestClient;
+use tokio::time::{Duration, sleep};
 
 #[allow(dead_code)]
 pub struct AtProtoGetFollows {
@@ -45,7 +46,7 @@ impl AtProtoGetFollows {
 
     pub async fn get_follows(
         &mut self,
-        did: AtIdentifier,
+        did: &AtIdentifier,
     ) -> anyhow::Result<(ProfileView, Vec<ProfileView>)> {
         if !self.is_login {
             match self.login().await {
@@ -86,5 +87,31 @@ impl AtProtoGetFollows {
             }
         }
         Ok((subject, all_follows))
+    }
+
+    pub async fn get_follows_w_retry(
+        &mut self,
+        did: AtIdentifier,
+        max_retry: u32,
+    ) -> anyhow::Result<(ProfileView, Vec<ProfileView>)> {
+        for retry in 0..max_retry {
+            match self.get_follows(&did).await {
+                Ok((subject, follows)) => return Ok((subject, follows)),
+                Err(e) => {
+                    eprintln!(
+                        "Retry {}/{} - Failed to fetch follows: {}",
+                        retry + 1,
+                        max_retry,
+                        e
+                    );
+                    sleep(Duration::from_secs(2u64.pow(retry))).await;
+                }
+            }
+        }
+        Err(anyhow::anyhow!(
+            "Unable to fetch Follows for {:?} after {} retries.",
+            did,
+            max_retry
+        ))
     }
 }

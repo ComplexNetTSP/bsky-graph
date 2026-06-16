@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
 
 pub struct DidFileReader {
+    pub path: String,
     reader: BufReader<File>,
     position: u64,
 }
@@ -11,6 +12,7 @@ impl DidFileReader {
     pub fn new(path: &str) -> Result<Self> {
         let file = File::open(path).context("Unable to open Did file")?;
         Ok(DidFileReader {
+            path: path.to_string(),
             reader: BufReader::new(file),
             position: 0,
         })

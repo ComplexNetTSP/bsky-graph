@@ -1,8 +1,9 @@
 use anyhow::Result;
 use atrium_api::app::bsky::actor::defs::ProfileView;
+use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Follows {
     // subject
     pub did: String,
