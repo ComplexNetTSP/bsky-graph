@@ -40,8 +40,7 @@ async fn main() -> Result<()> {
     let password =
         env::var("BSKY_PASSWORD").context("Missing BSKY_PASSWORD environment variable")?;
     let args = Args::parse();
-    setup_logger(&args.log_file)
-        .context(format!("unable to create log file {}", &args.log_file))?;
+    setup_logger(&args.log_file).context(format!("unable to create log file {}", args.log_file))?;
 
     // Initialize the agent
     let atproto_follows: AtProtoGetFollows = AtProtoGetFollows::new(&login, &password, args.limit);
