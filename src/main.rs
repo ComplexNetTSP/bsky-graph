@@ -1,5 +1,7 @@
 use anyhow::{Context, Result};
-use bsky_graph::{AtProtoGetFollows, DidFileReader, ParquetWriter, utils::setup_logger};
+use bsky_graph::{
+    AtProtoGetFollower, AtProtoGetFollows, DidFileReader, ParquetWriter, utils::setup_logger,
+};
 use clap::Parser;
 use std::env;
 
@@ -25,6 +27,9 @@ struct Args {
     /// Log file
     #[arg(short='w', long, default_value_t = String::from("bsky-graph.log"))]
     log_file: String,
+    /// maximum of request retry before failling
+    #[arg(short, long, default_value_t = 10)]
+    max_retry: u32,
 }
 
 #[tokio::main]
@@ -37,10 +42,27 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     setup_logger(&args.log_file)
         .context(format!("unable to create log file {}", &args.log_file))?;
-    let reader = DidFileReader::new(&args.input_file)?;
+
     // Initialize the agent
-    let atproto: AtProtoGetFollows = AtProtoGetFollows::new(&login, &password, args.limit);
-    let mut writer = ParquetWriter::new(atproto, reader, args.buf_size, &args.output_dir);
-    writer.write().await?;
+    let atproto_follows: AtProtoGetFollows = AtProtoGetFollows::new(&login, &password, args.limit);
+    let atproto_follower: AtProtoGetFollower =
+        AtProtoGetFollower::new(&login, &password, args.limit);
+
+    let mut follows_writer = ParquetWriter::new(
+        atproto_follows,
+        DidFileReader::new(&args.input_file)?,
+        args.buf_size,
+        &args.output_dir,
+        args.max_retry,
+    );
+    let mut follower_writer = ParquetWriter::new(
+        atproto_follower,
+        DidFileReader::new(&args.input_file)?,
+        args.buf_size,
+        &args.output_dir,
+        args.max_retry,
+    );
+    follows_writer.write().await?;
+    follower_writer.write().await?;
     Ok(())
 }

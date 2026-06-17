@@ -1,8 +1,8 @@
-use anyhow::Result;
 use atrium_api::app::bsky::actor::defs::ProfileView;
+use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Follower {
     // subject
     pub did: String,
@@ -19,11 +19,8 @@ pub struct Follower {
 }
 
 impl Follower {
-    pub fn create_edge_list(
-        suject: ProfileView,
-        followers: Vec<ProfileView>,
-    ) -> Result<Vec<Follower>> {
-        let list = followers
+    pub fn create_edge_list(suject: ProfileView, followers: Vec<ProfileView>) -> Vec<Follower> {
+        followers
             .iter()
             .map(|item| Follower {
                 did: suject.did.to_string(),
@@ -37,7 +34,6 @@ impl Follower {
                 follower_display_name: item.display_name.clone(),
                 follower_description: item.description.clone(),
             })
-            .collect();
-        Ok(list)
+            .collect()
     }
 }

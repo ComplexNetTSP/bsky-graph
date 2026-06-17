@@ -7,6 +7,7 @@ use atrium_api::{
     types::{LimitedNonZeroU8, string::AtIdentifier},
 };
 use atrium_xrpc_client::reqwest::ReqwestClient;
+use log::{error, info};
 use tokio::time::{Duration, sleep};
 
 #[allow(dead_code)]
@@ -48,9 +49,10 @@ impl AtProtoGetFollows {
     ) -> anyhow::Result<(ProfileView, Vec<ProfileView>)> {
         if !self.is_login {
             match self.login().await {
-                Ok(_) => eprintln!("Login sucessful"),
+                Ok(_) => info!("Get_follow Login sucessful to the bluesky api"),
                 Err(e) => {
-                    return Err(anyhow::anyhow!("Unable to login:{}", e));
+                    error!("Get_follow unable to login to the bluesky api: {}", e);
+                    return Err(anyhow::anyhow!("Unable to login: {}", e));
                 }
             }
         }
@@ -96,7 +98,7 @@ impl AtProtoGetFollows {
             match self.get_follows(&did).await {
                 Ok((subject, follows)) => return Ok((subject, follows)),
                 Err(e) => {
-                    eprintln!(
+                    error!(
                         "Retry {}/{} - Failed to fetch follows: {}",
                         retry + 1,
                         max_retry,
@@ -106,6 +108,10 @@ impl AtProtoGetFollows {
                 }
             }
         }
+        error!(
+            "Unable to fetch Follows for {:?} after {} retries.",
+            did, max_retry
+        );
         Err(anyhow::anyhow!(
             "Unable to fetch Follows for {:?} after {} retries.",
             did,

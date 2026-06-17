@@ -1,4 +1,5 @@
-use anyhow::Context;
+use crate::{atproto_client::AtProtoClient, follower::Follower};
+use anyhow::{Context, Result};
 use atrium_api::{
     agent::atp_agent::{AtpAgent, store::MemorySessionStore},
     app::bsky::actor::defs::ProfileView,
@@ -6,6 +7,8 @@ use atrium_api::{
     types::{LimitedNonZeroU8, string::AtIdentifier},
 };
 use atrium_xrpc_client::reqwest::ReqwestClient;
+use log::{error, info};
+use tokio::time::{Duration, sleep};
 
 #[allow(dead_code)]
 pub struct AtProtoGetFollower {
@@ -13,10 +16,12 @@ pub struct AtProtoGetFollower {
     password: String,
     agent: AtpAgent<MemorySessionStore, ReqwestClient>,
     is_login: bool,
+    limit: Option<LimitedNonZeroU8<100>>,
 }
 
 impl AtProtoGetFollower {
-    pub fn new(login: &str, password: &str) -> Self {
+    pub fn new(login: &str, password: &str, limit: u8) -> Self {
+        let limit = LimitedNonZeroU8::<100>::try_from(limit).ok();
         // Initialize the agent
         let agent = AtpAgent::new(
             ReqwestClient::new("https://bsky.social"),
@@ -27,6 +32,7 @@ impl AtProtoGetFollower {
             password: password.to_string(),
             agent,
             is_login: false,
+            limit,
         }
     }
 
@@ -39,12 +45,13 @@ impl AtProtoGetFollower {
 
     pub async fn get_follower(
         &mut self,
-        did: AtIdentifier,
+        did: &AtIdentifier,
     ) -> anyhow::Result<(ProfileView, Vec<ProfileView>)> {
         if !self.is_login {
             match self.login().await {
-                Ok(_) => eprintln!("Login sucessful"),
+                Ok(_) => info!("Get_Follower login sucessful to bluesky api"),
                 Err(e) => {
+                    error!("Get_Follower unable to login to bluesky api: {}", e);
                     return Err(anyhow::anyhow!("Unable to login:{}", e));
                 }
             }
@@ -52,7 +59,6 @@ impl AtProtoGetFollower {
         let mut cursor = None;
         let subject;
         let mut all_followers = Vec::new();
-        let limit = LimitedNonZeroU8::try_from(10).map_err(anyhow::Error::msg)?;
         // Call the getFollowers endpoint
         loop {
             let response = self
@@ -65,7 +71,7 @@ impl AtProtoGetFollower {
                     get_followers::ParametersData {
                         actor: did.clone(),
                         cursor,
-                        limit: Some(limit),
+                        limit: self.limit,
                     }
                     .into(),
                 )
@@ -80,5 +86,53 @@ impl AtProtoGetFollower {
             }
         }
         Ok((subject, all_followers))
+    }
+
+    pub async fn get_follower_w_retry(
+        &mut self,
+        did: AtIdentifier,
+        max_retry: u32,
+    ) -> anyhow::Result<(ProfileView, Vec<ProfileView>)> {
+        for retry in 0..max_retry {
+            match self.get_follower(&did).await {
+                Ok((subject, follows)) => return Ok((subject, follows)),
+                Err(e) => {
+                    error!(
+                        "Retry {}/{} - Failed to fetch follows: {}",
+                        retry + 1,
+                        max_retry,
+                        e
+                    );
+                    sleep(Duration::from_secs(2u64.pow(retry))).await;
+                }
+            }
+        }
+        error!(
+            "Unable to fetch Follows for {:?} after {} retries.",
+            did, max_retry
+        );
+        Err(anyhow::anyhow!(
+            "Unable to fetch Follows for {:?} after {} retries.",
+            did,
+            max_retry
+        ))
+    }
+}
+
+impl AtProtoClient<Follower> for AtProtoGetFollower {
+    async fn get_graph_w_retry(
+        &mut self,
+        did: AtIdentifier,
+        retries: u32,
+    ) -> Result<Vec<Follower>> {
+        let (subject, follower) = self
+            .get_follower_w_retry(did, retries)
+            .await
+            .context("Error fetching follower")?;
+        Ok(Follower::create_edge_list(subject, follower))
+    }
+
+    fn type_name() -> String {
+        "follower".to_string()
     }
 }

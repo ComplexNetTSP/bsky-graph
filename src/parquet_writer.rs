@@ -1,9 +1,9 @@
-use crate::{DidFileReader, Follows, atproto_client::AtProtoClient, utils::count_lines};
+use crate::{DidFileReader, atproto_client::AtProtoClient, utils::count_lines};
 use anyhow::Result;
 use arrow::{array::RecordBatch, datatypes::FieldRef};
 use atrium_api::types::string::{AtIdentifier, Did};
 use chrono::Local;
-use indicatif::ProgressBar;
+use indicatif::{ProgressBar, ProgressStyle};
 use log::{error, info};
 use parquet::{arrow::ArrowWriter, basic::Compression, file::properties::WriterProperties};
 use serde::{Deserialize, Serialize};
@@ -28,6 +28,7 @@ where
     pub buf_size: usize,
     pub output_dir: String,
     pub buf: Vec<T>,
+    pub max_retry: u32,
 }
 
 impl<T, C> ParquetWriter<T, C>
@@ -35,19 +36,32 @@ where
     T: Serialize + Deserialize<'static>,
     C: AtProtoClient<T>,
 {
-    pub fn new(atproto: C, reader: DidFileReader, buf_size: usize, output_dir: &str) -> Self {
+    pub fn new(
+        atproto: C,
+        reader: DidFileReader,
+        buf_size: usize,
+        output_dir: &str,
+        max_retry: u32,
+    ) -> Self {
         ParquetWriter {
             atproto,
             reader,
             buf_size,
             output_dir: output_dir.to_string(),
             buf: vec![],
+            max_retry,
         }
     }
 
     pub async fn write(&mut self) -> Result<()> {
-        println!("Retrives Flollows:");
+        let progress_bar_msg = format!("Processing {}:", C::type_name());
         let bar = ProgressBar::new(count_lines(&self.reader.path)? as u64);
+        bar.set_style(
+            ProgressStyle::default_bar()
+                .template("{msg} {wide_bar} {pos}/{len}")
+                .unwrap(),
+        );
+        bar.set_message(progress_bar_msg);
         while let Some(did) = self.reader.read_did()? {
             // pause 100 ms in order to pace the number of request and avoid to be ban
             pause_ms!(100);
@@ -60,7 +74,10 @@ where
                 }
             };
             let did_id: AtIdentifier = AtIdentifier::Did(did_parsed);
-            let mut edges = self.atproto.get_graph_w_retry(did_id, 10).await?;
+            let mut edges = self
+                .atproto
+                .get_graph_w_retry(did_id, self.max_retry)
+                .await?;
             self.buf.append(&mut edges);
             if self.buf.len() > self.buf_size {
                 self.flush()?;
@@ -81,7 +98,7 @@ where
             self.buf.len()
         );
         // Determine Arrow schema
-        let fields = Vec::<FieldRef>::from_type::<Follows>(TracingOptions::default())?;
+        let fields = Vec::<FieldRef>::from_type::<T>(TracingOptions::default())?;
         // Build a record batch
         let batch = serde_arrow::to_record_batch(&fields, &self.buf)?;
         self.to_parquet(batch)?;
@@ -96,7 +113,7 @@ where
             &self.output_dir,
             &C::type_name(),
             timestamp,
-            &&C::type_name(),
+            &C::type_name(),
         );
         info!("Process follow_writer write file: {}", &filepath);
         let file = Path::new(&filepath);
