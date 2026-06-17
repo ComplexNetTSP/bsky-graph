@@ -110,7 +110,7 @@ where
         let timestamp = Local::now().format("%Y_%m_%d_%H_%M_%S").to_string();
         let filepath = format!(
             "{}/{}/{}_{}.parquet",
-            &self.output_dir,
+            self.output_dir,
             C::type_name(),
             timestamp,
             C::type_name(),
