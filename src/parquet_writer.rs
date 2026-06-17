@@ -111,11 +111,11 @@ where
         let filepath = format!(
             "{}/{}/{}_{}.parquet",
             &self.output_dir,
-            &C::type_name(),
+            C::type_name(),
             timestamp,
-            &C::type_name(),
+            C::type_name(),
         );
-        info!("Process follow_writer write file: {}", &filepath);
+        info!("Process follow_writer write file: {}", filepath);
         let file = Path::new(&filepath);
         if let Some(parent) = Path::new(file).parent() {
             std::fs::create_dir_all(parent)?;
