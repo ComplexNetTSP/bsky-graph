@@ -15,7 +15,7 @@ jobs:
             binary: bsky-graph
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            binary: bsky-graphexe
+            binary: bsky-graph.exe
           - os: macos-latest
             target: x86_64-apple-darwin
             binary: bsky-graph
