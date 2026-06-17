@@ -1,6 +1,6 @@
 # bsky-graph
-[![GitHub Release](https://img.shields.io/github/v/release/ComplexNetTSP/bsky-firehose)](https://github.com/ComplexNetTSP/bsky-firehose/releases)
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/ComplexNetTSP/bsky-firehose/build.yaml)](https://github.com/ComplexNetTSP/bsky-firehose/actions)
+[![GitHub Release](https://img.shields.io/github/v/release/ComplexNetTSP/bsky-graph)](https://github.com/ComplexNetTSP/bsky-graph/releases)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/ComplexNetTSP/bsky-graph/build.yaml)](https://github.com/ComplexNetTSP/bsky-graph/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Dump followers and follows DIDs for Bluesky users to Parquet files.
