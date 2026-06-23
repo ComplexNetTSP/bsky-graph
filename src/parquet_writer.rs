@@ -9,14 +9,6 @@ use parquet::{arrow::ArrowWriter, basic::Compression, file::properties::WriterPr
 use serde::{Deserialize, Serialize};
 use serde_arrow::schema::{SchemaLike, TracingOptions};
 use std::{fs::File, path::Path};
-use tokio::time::sleep;
-
-// to use only in async function
-macro_rules! pause_ms {
-    ($t: expr) => {
-        sleep(tokio::time::Duration::from_millis($t)).await;
-    };
-}
 
 pub struct ParquetWriter<T, C>
 where
@@ -63,10 +55,8 @@ where
         );
         bar.set_message(progress_bar_msg);
         while let Some(did) = self.reader.read_did()? {
-            // pause 100 ms in order to pace the number of request and avoid to be ban
-            pause_ms!(100);
             // Create from a handle string
-            let did_parsed = match Did::new(did) {
+            let did_parsed = match Did::new(did.clone()) {
                 Ok(d) => d,
                 Err(e) => {
                     error!("Unable to parse did: {}", e);
@@ -74,11 +64,21 @@ where
                 }
             };
             let did_id: AtIdentifier = AtIdentifier::Did(did_parsed);
-            let mut edges = self
-                .atproto
-                .get_graph_w_retry(did_id, self.max_retry)
-                .await?;
-            self.buf.append(&mut edges);
+
+            match self.atproto.get_graph_w_retry(did_id, self.max_retry).await {
+                Ok(mut edges) => self.buf.append(&mut edges),
+                Err(e) => {
+                    error!(
+                        "Unable to fetch {} for did: {} with error {} after {} reties",
+                        C::type_name(),
+                        did,
+                        e,
+                        self.max_retry
+                    );
+                    continue;
+                }
+            }
+
             if self.buf.len() > self.buf_size {
                 self.flush()?;
             }

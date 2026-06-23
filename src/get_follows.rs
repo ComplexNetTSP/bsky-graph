@@ -7,7 +7,13 @@ use atrium_api::{
     types::{LimitedNonZeroU8, string::AtIdentifier},
 };
 use atrium_xrpc_client::reqwest::ReqwestClient;
+use governor::{
+    Quota, RateLimiter,
+    clock::DefaultClock,
+    state::{InMemoryState, NotKeyed},
+};
 use log::{error, info};
+use std::num::NonZeroU32;
 use tokio::time::{Duration, sleep};
 
 #[allow(dead_code)]
@@ -17,6 +23,7 @@ pub struct AtProtoGetFollows {
     agent: AtpAgent<MemorySessionStore, ReqwestClient>,
     is_login: bool,
     limit: Option<LimitedNonZeroU8<100>>,
+    rate_limiter: RateLimiter<NotKeyed, InMemoryState, DefaultClock>,
 }
 
 impl AtProtoGetFollows {
@@ -27,12 +34,16 @@ impl AtProtoGetFollows {
             ReqwestClient::new("https://bsky.social"),
             MemorySessionStore::default(),
         );
+        // hard coded default Bluesky query limit
+        let rate_limiter =
+            RateLimiter::direct(Quota::per_second(NonZeroU32::new(3000 / 5).unwrap()));
         AtProtoGetFollows {
             login_name: login.to_string(),
             password: password.to_string(),
             agent,
             is_login: false,
             limit,
+            rate_limiter,
         }
     }
 
@@ -61,6 +72,8 @@ impl AtProtoGetFollows {
         let mut all_follows = Vec::new();
         // Call the getFollowers endpoint
         loop {
+            // Apply rate limit
+            self.rate_limiter.until_ready().await;
             let response = self
                 .agent
                 .api
