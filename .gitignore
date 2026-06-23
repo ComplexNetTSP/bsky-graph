@@ -3,3 +3,4 @@
 .env
 *.log
 .ipynb_checkpoints/
+tests/did_large.txt
