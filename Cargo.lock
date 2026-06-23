@@ -513,6 +513,7 @@ dependencies = [
  "parquet",
  "serde",
  "serde_arrow",
+ "thiserror 2.0.18",
  "tokio",
 ]
 

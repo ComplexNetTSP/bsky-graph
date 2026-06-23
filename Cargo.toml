@@ -19,4 +19,5 @@ log4rs = "1.4.0"
 parquet = "59.0.0"
 serde = "1.0.228"
 serde_arrow = { version = "0.14.2", features = ["arrow-59"] }
+thiserror = "2.0.18"
 tokio = { version = "1.52.3", features = ["full"] }

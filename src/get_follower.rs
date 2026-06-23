@@ -1,10 +1,11 @@
-use crate::{atproto_client::AtProtoClient, follower::Follower};
+use crate::{GetGraphError, atproto_client::AtProtoClient, follower::Follower};
 use anyhow::{Context, Result};
 use atrium_api::{
     agent::atp_agent::{AtpAgent, store::MemorySessionStore},
     app::bsky::actor::defs::ProfileView,
     app::bsky::graph::get_followers,
     types::{LimitedNonZeroU8, string::AtIdentifier},
+    xrpc::Error as XrpcError,
 };
 use atrium_xrpc_client::reqwest::ReqwestClient;
 use governor::{
@@ -56,13 +57,13 @@ impl AtProtoGetFollower {
     pub async fn get_follower(
         &mut self,
         did: &AtIdentifier,
-    ) -> anyhow::Result<(ProfileView, Vec<ProfileView>)> {
+    ) -> Result<(ProfileView, Vec<ProfileView>), GetGraphError> {
         if !self.is_login {
             match self.login().await {
                 Ok(_) => info!("Get_Follower login sucessful to bluesky api"),
                 Err(e) => {
                     error!("Get_Follower unable to login to bluesky api: {}", e);
-                    return Err(anyhow::anyhow!("Unable to login:{}", e));
+                    return Err(GetGraphError::UnableToLogin);
                 }
             }
         }
@@ -74,7 +75,7 @@ impl AtProtoGetFollower {
             // Apply rate limit
             self.rate_limiter.until_ready().await;
             // send query
-            let response = self
+            let message = self
                 .agent
                 .api
                 .app
@@ -88,8 +89,18 @@ impl AtProtoGetFollower {
                     }
                     .into(),
                 )
-                .await
-                .context("Failled to get followers")?;
+                .await;
+
+            let response = match message {
+                Ok(response) => response,
+                Err(XrpcError::XrpcResponse(response)) => match response.status.as_u16() {
+                    400 => return Err(GetGraphError::BadRequest),
+                    429 => return Err(GetGraphError::RateLimited),
+                    _ => return Err(GetGraphError::UnexpectedResponseType),
+                },
+                Err(_) => return Err(GetGraphError::UnexpectedResponseType),
+            };
+
             all_followers.extend(response.data.followers);
             if let Some(next_cursor) = response.data.cursor {
                 cursor = Some(next_cursor);
@@ -109,26 +120,19 @@ impl AtProtoGetFollower {
         for retry in 0..max_retry {
             match self.get_follower(&did).await {
                 Ok((subject, follows)) => return Ok((subject, follows)),
-                Err(e) => {
+                Err(GetGraphError::RateLimited) => {
                     error!(
-                        "Retry {}/{} - Failed to fetch follows: {}",
+                        "GetFollower Retry {}/{} after get rate mlimited",
                         retry + 1,
-                        max_retry,
-                        e
+                        max_retry
                     );
                     sleep(Duration::from_secs(2u64.pow(retry))).await;
                 }
+                Err(_) => break,
             }
         }
-        error!(
-            "Unable to fetch Follows for {:?} after {} retries.",
-            did, max_retry
-        );
-        Err(anyhow::anyhow!(
-            "Unable to fetch Follows for {:?} after {} retries.",
-            did,
-            max_retry
-        ))
+        error!("Unable to fetch Follower for {:?}.", did);
+        Err(anyhow::anyhow!("Unable to fetch Follower for {:?}", did))
     }
 }
 

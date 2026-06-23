@@ -13,3 +13,16 @@ pub use get_follower::AtProtoGetFollower;
 pub use get_follows::AtProtoGetFollows;
 pub use parquet_writer::ParquetWriter;
 pub use read_did::DidFileReader;
+
+/// An enum of possible error kinds.
+#[derive(thiserror::Error, Debug)]
+pub enum GetGraphError {
+    #[error("rate limited")]
+    RateLimited,
+    #[error("bad request")]
+    BadRequest,
+    #[error("unable to login")]
+    UnableToLogin,
+    #[error("unexepected error")]
+    UnexpectedResponseType,
+}

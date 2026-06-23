@@ -67,16 +67,7 @@ where
 
             match self.atproto.get_graph_w_retry(did_id, self.max_retry).await {
                 Ok(mut edges) => self.buf.append(&mut edges),
-                Err(e) => {
-                    error!(
-                        "Unable to fetch {} for did: {} with error {} after {} reties",
-                        C::type_name(),
-                        did,
-                        e,
-                        self.max_retry
-                    );
-                    continue;
-                }
+                Err(_) => continue,
             }
 
             if self.buf.len() > self.buf_size {
