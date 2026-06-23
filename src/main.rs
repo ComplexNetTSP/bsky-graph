@@ -3,13 +3,13 @@ use bsky_graph::{
     AtProtoGetFollower, AtProtoGetFollows, DidFileReader, ParquetWriter, utils::setup_logger,
 };
 use clap::Parser;
+use log::info;
 use std::env;
 
 #[derive(Parser, Debug)]
 #[command(
     version,
-    about,
-    long_about = "Dump followers and follows DIDs for Bluesky users to Parquet files"
+    about = "Dump followers and follows DIDs for Bluesky users to Parquet files"
 )]
 struct Args {
     /// Input file containing list of bluesky DID
@@ -30,6 +30,9 @@ struct Args {
     /// maximum of request retry before failling
     #[arg(short, long, default_value_t = 10)]
     max_retry: u32,
+    /// Retrive the follower else retrive the Follows
+    #[arg(short, long)]
+    follower: bool,
 }
 
 #[tokio::main]
@@ -47,21 +50,29 @@ async fn main() -> Result<()> {
     let atproto_follower: AtProtoGetFollower =
         AtProtoGetFollower::new(&login, &password, args.limit);
 
-    let mut follows_writer = ParquetWriter::new(
-        atproto_follows,
-        DidFileReader::new(&args.input_file)?,
-        args.buf_size,
-        &args.output_dir,
-        args.max_retry,
-    );
-    let mut follower_writer = ParquetWriter::new(
-        atproto_follower,
-        DidFileReader::new(&args.input_file)?,
-        args.buf_size,
-        &args.output_dir,
-        args.max_retry,
-    );
-    follows_writer.write().await?;
-    follower_writer.write().await?;
+    // either fetch the follower or the follows
+    if args.follower {
+        info!("Start to fetch Follower");
+        let mut follower_writer = ParquetWriter::new(
+            atproto_follower,
+            DidFileReader::new(&args.input_file)?,
+            args.buf_size,
+            &args.output_dir,
+            args.max_retry,
+        );
+
+        follower_writer.write().await?;
+    } else {
+        info!("Start to fetch Follows");
+        let mut follows_writer = ParquetWriter::new(
+            atproto_follows,
+            DidFileReader::new(&args.input_file)?,
+            args.buf_size,
+            &args.output_dir,
+            args.max_retry,
+        );
+
+        follows_writer.write().await?;
+    }
     Ok(())
 }
