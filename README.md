@@ -16,7 +16,7 @@ A command-line tool that retrieves follower and following relationships from Blu
 - Output to Parquet format for efficient storage and querying
 - Configurable page size, buffer size, and retry logic
 - Progress tracking with progress bars
-- Rate limiting to prevent API ban (600 requests/second)
+- Rate limiting to prevent API ban (3 requests/second)
 
 ## Usage
 
@@ -46,6 +46,12 @@ cargo run -- --input-file users.txt --output-dir ./output
 - Bluesky account credentials
 
 ## Changelog
+
+### v0.1.4 (2026-06-23)
+- Update version to 0.1.4
+
+### v0.1.3 (2026-06-23)
+- Changed rate limit from 600 to 3 requests/second
 
 ### v0.1.2 (2026-06-23)
 - Added rate limiting using `governor` crate (600 requests/second) to prevent API bans
