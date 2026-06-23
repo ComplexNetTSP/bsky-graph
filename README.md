@@ -26,8 +26,11 @@ A command-line tool that retrieves follower and following relationships from Blu
 cp .env.example .env
 # Edit .env with your BSKY_LOGIN and BSKY_PASSWORD
 
-# Run the tool
+# Fetch follows (default)
 cargo run -- --input-file users.txt --output-dir ./output
+
+# Fetch followers instead
+cargo run -- --input-file users.txt --output-dir ./output --follower
 ```
 
 ## Command Line Arguments
@@ -40,6 +43,7 @@ cargo run -- --input-file users.txt --output-dir ./output
 | `--output-dir` | `-o` | `./output` | Output directory for Parquet files |
 | `--log-file` | `-w` | `bsky-graph.log` | Log file path |
 | `--max-retry` | `-m` | 10 | Maximum number of retries before failing |
+| `--follower` | `-f` | false | Fetch followers instead of follows |
 
 ## Requirements
 
@@ -48,10 +52,19 @@ cargo run -- --input-file users.txt --output-dir ./output
 
 ## Changelog
 
+### v0.1.6 (2026-06-23)
+- Added `--follower` flag to choose between fetching followers or follows
+- Enhanced command-line interface with better descriptions
+- Fixed rate limiter: unified to 5 requests/second for both followers and follows
+- Added info logging to indicate which type is being fetched
+
 ### v0.1.5 (2026-06-23)
+- Added `thiserror` dependency for typed error handling
 - Created `GetGraphError` enum with variants for rate limiting, bad requests, login failures, and unexpected errors
 - Improved error handling in `get_follows` and `get_follower` with smart retry logic (only retry on rate limit errors)
 - Adjusted rate limits: 5 requests/second for follows, 3 requests/second for followers
+- Removed large test DID file from repository
+- Updated `.gitignore`
 
 ### v0.1.4 (2026-06-23)
 - Update version to 0.1.4
