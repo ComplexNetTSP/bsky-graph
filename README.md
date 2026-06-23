@@ -16,6 +16,7 @@ A command-line tool that retrieves follower and following relationships from Blu
 - Output to Parquet format for efficient storage and querying
 - Configurable page size, buffer size, and retry logic
 - Progress tracking with progress bars
+- Rate limiting to prevent API ban (600 requests/second)
 
 ## Usage
 
@@ -43,6 +44,16 @@ cargo run -- --input-file users.txt --output-dir ./output
 
 - Rust 2024 edition
 - Bluesky account credentials
+
+## Changelog
+
+### v0.1.1 (2026-06-23)
+- Added rate limiting using `governor` crate (600 requests/second) to prevent API bans
+- Removed manual 100ms delay between requests
+- Improved error handling in parquet writer
+
+### v0.1.0 (2026-06-15)
+- Initial release
 
 ## License
 
