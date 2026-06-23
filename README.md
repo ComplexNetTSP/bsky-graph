@@ -16,7 +16,8 @@ A command-line tool that retrieves follower and following relationships from Blu
 - Output to Parquet format for efficient storage and querying
 - Configurable page size, buffer size, and retry logic
 - Progress tracking with progress bars
-- Rate limiting to prevent API ban (3 requests/second)
+- Rate limiting to prevent API ban
+- Typed error handling with smart retry logic (retries only on rate limit errors)
 
 ## Usage
 
@@ -46,6 +47,11 @@ cargo run -- --input-file users.txt --output-dir ./output
 - Bluesky account credentials
 
 ## Changelog
+
+### v0.1.5 (2026-06-23)
+- Created `GetGraphError` enum with variants for rate limiting, bad requests, login failures, and unexpected errors
+- Improved error handling in `get_follows` and `get_follower` with smart retry logic (only retry on rate limit errors)
+- Adjusted rate limits: 5 requests/second for follows, 3 requests/second for followers
 
 ### v0.1.4 (2026-06-23)
 - Update version to 0.1.4
