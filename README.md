@@ -64,9 +64,6 @@ cargo run -- --input-file users.txt --output-dir ./output --follower
 - Improved error handling in `get_follows` and `get_follower` with smart retry logic (only retry on rate limit errors)
 - Adjusted rate limits: 5 requests/second for follows, 3 requests/second for followers
 
-### v0.1.4 (2026-06-23)
-- Update version to 0.1.4
-
 ### v0.1.3 (2026-06-23)
 - Changed rate limit from 600 to 3 requests/second
 
