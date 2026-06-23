@@ -63,8 +63,6 @@ cargo run -- --input-file users.txt --output-dir ./output --follower
 - Created `GetGraphError` enum with variants for rate limiting, bad requests, login failures, and unexpected errors
 - Improved error handling in `get_follows` and `get_follower` with smart retry logic (only retry on rate limit errors)
 - Adjusted rate limits: 5 requests/second for follows, 3 requests/second for followers
-- Removed large test DID file from repository
-- Updated `.gitignore`
 
 ### v0.1.4 (2026-06-23)
 - Update version to 0.1.4
