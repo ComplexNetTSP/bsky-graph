@@ -35,8 +35,7 @@ impl AtProtoGetFollower {
             MemorySessionStore::default(),
         );
         // hard coded default Bluesky query limit
-        let rate_limiter =
-            RateLimiter::direct(Quota::per_second(NonZeroU32::new(3000 / 5).unwrap()));
+        let rate_limiter = RateLimiter::direct(Quota::per_second(NonZeroU32::new(3).unwrap()));
         AtProtoGetFollower {
             login_name: login.to_string(),
             password: password.to_string(),

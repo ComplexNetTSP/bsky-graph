@@ -47,7 +47,7 @@ cargo run -- --input-file users.txt --output-dir ./output
 
 ## Changelog
 
-### v0.1.1 (2026-06-23)
+### v0.1.2 (2026-06-23)
 - Added rate limiting using `governor` crate (600 requests/second) to prevent API bans
 - Removed manual 100ms delay between requests
 - Improved error handling in parquet writer
